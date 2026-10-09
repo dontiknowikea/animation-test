@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tempest Client — Loading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .tempest-loading-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scene-background {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .scene-background.outgoing {
+      opacity: 1;
+      transition: opacity 0s linear;
+      pointer-events: none;
+    }
+
+    .scene-background.incoming {
+      opacity: 0;
+      transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+
+    .scene-background.incoming.active {
+      opacity: 1;
+    }
+
+    /* Rain glass overlay — ONLY active during rainclouds scene */
+    .rain-glass-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      backdrop-filter: blur(0.5px);
+      background: linear-gradient(135deg, rgba(200, 210, 220, 0.08) 0%, rgba(150, 170, 190, 0.06) 100%);
+      opacity: 0;
+      transition: opacity 1.5s ease-out;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .rain-glass-overlay.active {
+      opacity: 1;
+    }
+
+    canvas#rain-droplets-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 1.5s ease-out;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    canvas#rain-droplets-canvas.active {
+      opacity: 1;
+    }
+
+    /* Branding container */
+    .branding-container {
+      position: relative;
+      z-index: 5;
+      text-align: center;
+      color: #fff;
+      animation: fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Logo */
+    .logo-wrapper {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    svg.tempest-logo {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.4));
+    }
+
+    /* Wordmark */
+    .wordmark {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      font-family: 'Geist', sans-serif;
+    }
+
+    /* Status label */
+    .status-label {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 32px;
+      font-family: 'Geist', sans-serif;
+    }
+
+    /* Progress bar */
+    .progress-bar-container {
+      width: 280px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #6ea8ff;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 8px rgba(110, 168, 255, 0.4);
+    }
+
+    /* Progress percentage label */
+    .progress-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.5);
+      text-align: center;
+      font-family: 'Geist Mono', monospace;
+      letter-spacing: 0.02em;
+    }
+
+    /* Reduced motion respect */
+    @media (prefers-reduced-motion: reduce) {
+      .scene-background.incoming {
+        transition: opacity 0.4s linear;
+      }
+
+      .rain-glass-overlay,
+      canvas#rain-droplets-canvas {
+        transition: opacity 0.3s linear;
+      }
+
+      .branding-container {
+        animation: none;
+        opacity: 1;
+      }
+
+      .progress-bar-fill {
+        transition: width 0.1s linear;
+      }
+    }
+
+    /* Text contrast on all backgrounds */
+    .branding-container {
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="tempest-loading-container">
+    <!-- Scene backgrounds -->
+    <div class="scene-background outgoing" id="scene-bg-1"></div>
+    <div class="scene-background incoming" id="scene-bg-2"></div>
+
+    <!-- Rain glass overlay (ONLY active during rainclouds) -->
+    <div class="rain-glass-overlay" id="rain-glass"></div>
+
+    <!-- Rain droplets canvas (ONLY active during rainclouds) -->
+    <canvas id="rain-droplets-canvas"></canvas>
+
+    <!-- Branding -->
+    <div class="branding-container">
+      <div class="logo-wrapper">
+        <svg class="tempest-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Four-blade storm swirl: each blade is a crescent rotated 90° -->
+          <g fill="white">
+            <!-- Blade 1: Up then Right (0°) -->
+            <path
+              d="M 50 50 L 46 50 Q 46 35 55 25 Q 65 35 65 50 Q 60 48 50 50 Z"
+              transform="rotate(0 50 50)"
+            />
+            <!-- Blade 2: Right then Down (90°) -->
+            <path
+              d="M 50 50 L 46 50 Q 46 35 55 25 Q 65 35 65 50 Q 60 48 50 50 Z"
+              transform="rotate(90 50 50)"
+            />
+            <!-- Blade 3: Down then Left (180°) -->
+            <path
+              d="M 50 50 L 46 50 Q 46 35 55 25 Q 65 35 65 50 Q 60 48 50 50 Z"
+              transform="rotate(180 50 50)"
+            />
+            <!-- Blade 4: Left then Up (270°) -->
+            <path
+              d="M 50 50 L 46 50 Q 46 35 55 25 Q 65 35 65 50 Q 60 48 50 50 Z"
+              transform="rotate(270 50 50)"
+            />
+          </g>
+        </svg>
+      </div>
+
+      <div class="wordmark">TEMPEST CLIENT</div>
+      <div class="status-label" id="status-text">Preparing your environment</div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-label" id="progress-label">0%</div>
+    </div>
+  </div>
+
+  <script type="module" src="loading-screen.js"></script>
+</body>
+</html>
